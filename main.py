@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 import pyperclip
+import json
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 #Password Generator Project
 from random import randint, choice, shuffle
@@ -29,21 +30,50 @@ def password_gen():
 
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 def save():
-    web = website_entry.get()
+    web = (website_entry.get()).capitalize()
     emai = email_entry.get()
     p = pw_entry.get()
+    new_data = {
+        web: {
+            "email": emai,
+            "password": p,
+        }
+    }
 
     if len(web) == 0 or len(emai) == 0 or len(p) == 0:
         messagebox.showinfo("Error", "Please enter all fields")
     else:
-        is_ok = messagebox.askokcancel("Confirmation", f"Website: {web} \n Email: {emai} \n Password: {p} \n Save?")
+        try:
+            with open("password.json", "r") as file:
+                data = json.load(file)
+        except FileNotFoundError:
+            with open("password.json", "w") as file:
+                json.dump(new_data, file, indent=4)
+        else:
+            data.update(new_data)
+            with open("password.json", "w") as file:
+                json.dump(data, file, indent=4)
 
-        if is_ok:
-            with open("password.txt", "a") as file:
-                file.write(f"{web} | {emai} | {p}\n")
-                website_entry.delete(0, END)
-                pw_entry.delete(0, END)
+        finally:
+            website_entry.delete(0, END)
+            pw_entry.delete(0, END)
 
+
+# ---------------------------- SEARCH SETUP ------------------------------- #
+def search():
+    try:
+        with open("password.json", "r") as file:
+            data = json.load(file)
+            site = (website_entry.get()).capitalize()
+    except FileNotFoundError:
+        messagebox.showinfo("Error", "Password file dose not exist")
+    else:
+        if site in data:
+            messagebox.showinfo("Password Found", f"E-mail: {data[site]["email"]}\nPassword: {data[site]["password"]}")
+            pyperclip.copy(data[site]["password"])
+            messagebox.showinfo("Success", "Password has been copied to clipboard")
+        else:
+            messagebox.showinfo("Error", f"{site} credentials does not exist")
 
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
@@ -59,8 +89,11 @@ website = Label(window, text='Website')
 website.grid(column=0, row=1)
 
 website_entry = Entry(width=40)
-website_entry.grid(column=1, row=1, columnspan=2)
+website_entry.grid(column=1, row=1)
 website_entry.focus()
+
+searchbt = Button(window, text='Search', width=12, command=search)
+searchbt.grid(column=2, row=1)
 
 email = Label(window, text='Email')
 email.grid(column=0, row=2)
